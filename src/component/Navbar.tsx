@@ -14,7 +14,7 @@ const page = () => {
       </div>
 
       <div className="text-xl flex-1 md:text-center  md:font-bold">
-        <Link href="/">BIZZA</Link>
+        <Link href="/">BIKESH</Link>
       </div>
 
       <div className="md:hidden">
