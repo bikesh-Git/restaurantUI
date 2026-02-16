@@ -1,23 +1,60 @@
-pipleline{
-    agent none 
-    stages{
-        stage('build'){
-        steps{
-            echo "this is build stage "
-        }
-        }
+pipeline {
+  agent any
 
-         stage('test'){
-        steps{
-            echo "this is test stage "
-        }
-        }
+  tools {
+    nodejs "Node18"
+  }
 
-         stage('deploy'){
-        steps{
-            echo "this is deploy stage "
-        }
-        }
+  environment {
+    EC2_USER = "ubuntu"
+    EC2_HOST = "YOUR_EC2_PUBLIC_IP"
+    DEPLOY_PATH = "/var/www/react-app"
+  }
 
+  stages {
+
+    stage('Install Dependencies') {
+      steps {
+        echo "Installing npm packages..."
+        sh 'npm install'
+      }
     }
+
+    stage('Build React App') {
+      steps {
+        echo "Building production build..."
+        sh 'npm run build'
+      }
+    }
+
+    stage('Deploy to EC2') {
+      steps {
+        echo "Deploying build to EC2 server..."
+
+        withCredentials([sshUserPrivateKey(
+          credentialsId: 'aws-server-key',
+          keyFileVariable: 'SSH_KEY'
+        )]) {
+
+          sh """
+          echo "Copying build files..."
+          scp -i $SSH_KEY -o StrictHostKeyChecking=no -r dist/* $EC2_USER@$EC2_HOST:$DEPLOY_PATH
+
+          echo "Restarting Nginx..."
+          ssh -i $SSH_KEY -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST 'sudo systemctl restart nginx'
+          """
+        }
+      }
+    }
+
+  }
+
+  post {
+    success {
+      echo "Deployment successful 🚀"
+    }
+    failure {
+      echo "Deployment failed ❌"
+    }
+  }
 }
